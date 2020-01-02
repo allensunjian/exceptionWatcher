@@ -60,25 +60,25 @@
 #####细数那些功能变化和新增：
 - 新增： 
   1.行为线：
-  ![](http://192.168.30.10:8888/Public/Uploads/2020-01-02/5e0d956dc2166.png)
+  ![](https://github.com/allensunjian/image/blob/master/exceptionWatcher/1.png)
   2.行为类型： 进入页面 --> 资源加载 -->接口 -->事件 --> url hash变化 --> 输出错误  （该顺序同样为监控的顺序）；
-  ![](http://192.168.30.10:8888/Public/Uploads/2020-01-02/5e0d9691362ea.png)
+  ![](https://github.com/allensunjian/image/blob/master/exceptionWatcher/2.png)
   3.接口返回事件监控：
-  ![](http://192.168.30.10:8888/Public/Uploads/2020-01-02/5e0d9711ce246.png)
+  ![](https://github.com/allensunjian/image/blob/master/exceptionWatcher/3.png)
   4.URL hash 改变同样计入事件
-  ![](http://192.168.30.10:8888/Public/Uploads/2020-01-02/5e0d97fa25577.png)
+  ![](https://github.com/allensunjian/image/blob/master/exceptionWatcher/4.png)
   备注：虽然RNSS项目用不到 url hash的监控，但是着眼于未来，单页面应用时该监控作为用户行为的一种变得尤为重要；
   5.新增ExceptionWatcher对象
     - showDevLogger 类型：函数  作用： 手动开启：日志打印，遇到错误时，可输出监控到的行为并输出错误
 	开启logger
-	![](http://192.168.30.10:8888/Public/Uploads/2020-01-02/5e0d9a6552ac8.png)
+	![](https://github.com/allensunjian/image/blob/master/exceptionWatcher/5.png)
 	发生错误
-	![](http://192.168.30.10:8888/Public/Uploads/2020-01-02/5e0d9aea1dad7.png)
+	![](https://github.com/allensunjian/image/blob/master/exceptionWatcher/6.png)
     - getCookie 类型： 方法 作用 ，获取当前页面的cookie
 	- getVersion 类型： 方法 作用， 获取当前监控插件的版本
 	- setWatchNum 类型： 方法 作用设置监控队列的数量；数量必须是数字且不能小于6；
    6.新增返回值监测，如果不是JSON的情况下会上报
-   ![](http://192.168.30.10:8888/Public/Uploads/2020-01-02/5e0da30e8f524.png)
+   ![](https://github.com/allensunjian/image/blob/master/exceptionWatcher/7.png)
    备注：虽然在RNSS中这种直接返回HTML的做法是普遍的，但是这是极其难预期的做法，也是被摒弃的陋习。所以目前监测他同样起到了，收集的作用，一旦某天想让他变得更好就需要用到这里收集到的接口数据去有针对性的迭代，而不必花大量的事件去进行整个项目的测试。
 - 微调
   1. tag 标签不再展示错误类型，而是固定展示发生错误的页面 和 内核版本   
