@@ -8,7 +8,7 @@
 
     'use strict';
 
-    var version = 'v1.0.2',
+    var version = 'v1.0.3',
 
          $d = $w.document,
 
@@ -37,6 +37,23 @@
           Nav = $w.navigator,
 
           HttpTimeOutStamp = 10000,
+
+          impIp = '59.110.244.9',
+          //impIp = '119.57.66.250',
+
+          _initState = 'waiting',
+          
+          _interactive_switch = true,
+
+          _CitySN = null,
+
+          _start = 0,
+
+          _end = 0,
+
+          _completeTime = 0,
+
+          _counter = 0,
 
           loggerOpts = {
             cnle: function (type, argus) {
@@ -125,7 +142,7 @@
             },
             http_request: function (local, query) {
               return {
-                host: query[6].replace('http://', '').replace('/', ''),
+                host: query[6],
                 path: query[7],
                 port: 80,
                 query: query[1]
@@ -183,8 +200,11 @@
    // TODO: 外界配置对象 待完成
     var retOpts = {
       showLogger: false,
-      queue_num: 10
+      queue_num: 10,
+      switch_watcher: true
     }
+
+    _exception_process();
 
     function addListen(type, fn, f) {
       $w.addEventListener(type, fn, true)
@@ -200,11 +220,11 @@
     function _init_program_watcher () {
       $w[Watcher] = watcher_bridge($w[Watcher], 'program_error', 'program', null, 'program_watcher', [_get_current_url().href, coreVersion]);
     };
-
+    // TODO: unstall module
     function _init_un_events () {
         //console.log('un');
         $w[un] = function () {
-
+          
         }
     }
 
@@ -246,7 +266,7 @@
       responseText = xhr.responseText;
       key = xhr.key;
       url = xhr.responseURL;
-      var o = _getPort(url);
+      var o = _getPort(url.toString());
       host = o.host;
       path = o.local;
       query = query_heaps[key];
@@ -254,7 +274,7 @@
       method = methods_heaps[key];
       status = xhr.status;
       totalTime = (xhr.endTime - xhr.startTime)/1000;
-      _bq_append(new Http_target(url, query, status, responseText, totalTime, host));
+      _bq_append(new Http_target(url, query, status, responseText, totalTime, host, path));
       try {
         parse(responseText);
       } catch (e) {
@@ -264,6 +284,7 @@
           statusText,
           'code:' + status + '-respones_error',
           responseText, method, host, path],
+          'respones_error',
           [_get_current_url().href, coreVersion]
           );
         _get_cookie();
@@ -293,7 +314,7 @@
 
     function _getPort(url) {
       var urlSp = url.split('/');
-      var host = urlSp[0] + '//' + urlSp[2]+'/';
+      var host = urlSp[0] + '//' + urlSp[2] + '/';
       return {
         local: url.replace(new RegExp(host), ''),
         host: host
@@ -414,6 +435,10 @@
       _create_tags(err, tags);
       _create_events_type(err, type + '【' + modified_text + '】');
       _mixim_behavior(err);
+      if (!_interactive_switch) {
+        console.warn('[exceptionWatcher log]: postEvents is closed')
+        return;
+      }
       _send_postEvents([err]);
     }
 
@@ -424,7 +449,6 @@
         behavior_line += '(' + (index + 1) + ')' + o.get_behavior() + (len == (index + 1) ? '__end' : '----->');
         retOpts.showLogger && console.log(o.get_behavior());
       })
-      console.log(err[queryErr]);
       err[queryErr].stack_trace[0].line_number += behavior_line;
     }
 
@@ -500,6 +524,7 @@
     }
 
     function _init_watcher() {
+      console.warn('[exceptionWatcher log]: exceptionWatcher Already initialized!')
       _init_http_watcher();
       _init_cnle_watcher();
       _init_program_watcher();
@@ -510,7 +535,6 @@
       _init_hash_watcher();
       _init_configs();
       _reset_parse();
-      _mounte_helper();
     }
     
     function _tip_change_broser() {
@@ -590,26 +614,23 @@
       }
     }
     
-    function Http_target(url, query, status, respones, totalTime, host) { 
-      this.computed_props(url, query, status, respones, totalTime, host);
+    function Http_target(url, query, status, respones, totalTime, host, port) {
+      this.computed_props(url, query, status, respones, totalTime, host, port);
     }
 
     Http_target.prototype = {
-      computed_props: function (url, query, status, respones, totalTime, host) {
-        props_helper(this, 'url', url);
+      computed_props: function (url, query, status, respones, totalTime, host, port) {
+        props_helper(this, 'url', url.toString());
         props_helper(this, 'query', query);
         props_helper(this, 'status', status);
         props_helper(this, 'respones', respones);
         props_helper(this, 'totalTime', totalTime);
         props_helper(this, 'host', host);
-        this.computed_port();
+        props_helper(this, 'port', port);
       },
       get_behavior: function () {
         return '请求接口：' + this.port + '耗时[' + this.totalTime + 's]';
       },
-      computed_port: function () {
-        props_helper(this, 'port', this.url.replace(new RegExp(this.host), ''));
-      }
     }
      
     function Exception_target(type, argus) {
@@ -689,6 +710,12 @@
         getVersion: function () {
           return version
         },
+        getWatcherState: function () {
+          return {
+            state: _initState,
+            time: _completeTime,
+          }
+        },
         setWatchNum: function (num) {
           if (isNaN(num)) {
             console.warn('[ExceptionWatcher exception] setWatchNum must be Number!');
@@ -699,16 +726,61 @@
             return;
           }
           retOpts.queue_num = num;
+        },
+        initWatcher: function () {
+          _init_watcher();
+          _interactive_switch = false;
+          return function () {
+            _interactive_switch = true;
+          }
         }
       }
+    }
+
+    function _exception_process() {
+      _start = _get_time();
+      var script = document.createElement('script');
+      var list = document.getElementsByTagName('head')[0];
+      var timer = null;
+      script.src = 'http://pv.sohu.com/cityjson?ie=utf-8';
+      list.insertBefore(script, list.childNodes[0]);
+      timer = setInterval(function () {
+        _counter++;
+        var b = false;
+        _CitySN = window.returnCitySN;
+        if (window.returnCitySN) {
+          b = returnCitySN.cip == impIp;
+          retOpts.switch_watcher = b;
+          b ? _ready(timer) : _failed(timer);
+        }
+        if (_counter >= 50) {
+          _failed(timer)
+        }
+      }, 50)
+    }
+
+    function _ready(timer) {
+      clearInterval(timer)
+      _initState = 'already';
+      _init_watcher();
+      _end = _get_time();
+      _completeTime = _end - _start;
+    };
+    
+    function _failed(timer) {
+      console.warn('[exceptionWatcher log]: exceptionWatcher closed in the development environment. use initWatcher to open it!')
+      clearInterval(timer);
+      _initState = 'suspend';
+      _end = _get_time();
+      _completeTime = _end - _start;
     }
 
     var t = _get_netCore();
 
     coreVersion = Array.isArray(t) ? t[0] : t;
 
-    _get_cookie();
+    _mounte_helper();
 
-    _init_watcher();
+    _get_cookie();
 
 })(window);
